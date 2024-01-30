@@ -1,5 +1,8 @@
 #pragma once
 #include <wx/wx.h>
+#include <iostream>
+#include <fstream>
+#include <string>
 
 class GUI : public wxFrame
 {
@@ -18,4 +21,15 @@ public:
 	void keyRelease(WORD keyCode);
 	void OnKeyPress(wxKeyEvent& event);
 	void OnChangeHotkey(wxCommandEvent& event);
+};
+
+class ChangeHotKeyDialog : public wxDialog
+{
+private:
+	int hotKeyID;
+
+public:
+	ChangeHotKeyDialog(wxWindow* parent, int hotKeyID);
+	void OnKeyPress(wxKeyEvent& event);
+	std::string KeyToString(int keycode);
 };
