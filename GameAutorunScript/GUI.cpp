@@ -2,18 +2,43 @@
 
 GUI::GUI(const wxString& title, const wxPoint& pos, const wxSize& size) :
 	wxFrame(NULL, wxID_ANY, title, pos, size, wxDEFAULT_FRAME_STYLE & ~(wxRESIZE_BORDER | wxMAXIMIZE_BOX)),
-	scriptActivated(false)
+	scriptActivated(false),
+	hotKeyCode(NULL)
 {
 	Bind(wxEVT_HOTKEY, &GUI::OnHotKey, this);
 	Bind(wxEVT_CHAR_HOOK, &GUI::OnKeyPress, this);
 
 	SetBackgroundColour(wxColour(43, 43, 43, 255));
 
-	hotKeyID = wxNewId();
-	RegisterHotKey(hotKeyID, wxMOD_NONE, WXK_RIGHT);
+	// Opening the file for reading 
+	std::ifstream inputFile("hotkey.txt");
 
-	//std::ofstream outFile("hotkey.txt", std::ios::app);
-	
+	hotKeyID = wxNewId();
+
+    if (!inputFile.is_open()) {
+		// If the file is not open (the first launch of the program), create it and write the value
+
+		hotKeyCode = WXK_RIGHT;
+
+		// Open the file for writing
+        std::ofstream outputFile("hotkey.txt");
+
+		// Write the value to a file
+        outputFile << hotKeyCode;
+
+        outputFile.close();
+    }
+    else {
+		// If the file is open (subsequent program launches), read the value from the file
+
+		// Read the value from the file
+		inputFile >> hotKeyCode;
+
+		inputFile.close();
+    }
+
+	RegisterHotKey(hotKeyID, wxMOD_NONE, hotKeyCode);
+
 	wxStaticText* textHotkey = new wxStaticText(this, wxID_ANY, "Autorun Hotkey");
 	textHotkey->SetForegroundColour(wxColour(255, 255, 255, 255));
 
@@ -23,7 +48,7 @@ GUI::GUI(const wxString& title, const wxPoint& pos, const wxSize& size) :
 	font.SetPointSize(15);
 	textHotkey->SetFont(font);
 
-	wxButton* changeHotkeyBtn = new wxButton(this, wxID_ANY, "Hotkey");
+	changeHotkeyBtn = new wxButton(this, wxID_ANY, KeyToString(hotKeyCode));
 	Bind(wxEVT_BUTTON, &GUI::OnChangeHotkey, this, changeHotkeyBtn->GetId());
 
 	wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -56,8 +81,31 @@ void GUI::OnHotKey(wxKeyEvent& event)
 
 void GUI::OnChangeHotkey(wxCommandEvent& event)
 {
-	ChangeHotKeyDialog* dialog = new ChangeHotKeyDialog(this, hotKeyID);
-	dialog->Show();
+	ChangeHotKeyDialog* dialog = new ChangeHotKeyDialog(this);
+	int result = dialog->ShowModal();
+	
+	if (result == wxID_OK)
+	{
+		int keyCode = dialog->getKeyCode();
+
+		UnregisterHotKey(hotKeyID);
+
+		RegisterHotKey(hotKeyID, wxMOD_NONE, keyCode);
+
+		std::ofstream outputFile("hotkey.txt");
+
+		outputFile.clear();
+
+		outputFile << keyCode;
+
+		outputFile.close();
+
+		hotKeyCode = keyCode;
+
+		changeHotkeyBtn->SetLabel(KeyToString(keyCode));
+	}
+
+	dialog->Destroy();
 }
 
 void GUI::keyPress(WORD keyCode)
@@ -94,9 +142,9 @@ void GUI::OnKeyPress(wxKeyEvent& event)
 	//}
 }
 
-ChangeHotKeyDialog::ChangeHotKeyDialog(wxWindow* parent, int hotKeyID) :
+ChangeHotKeyDialog::ChangeHotKeyDialog(wxWindow* parent) :
 	wxDialog(parent, wxID_ANY, "Change HotKey"),
-	hotKeyID(hotKeyID)
+	keyCode(NULL)
 {
 	Bind(wxEVT_CHAR_HOOK, &ChangeHotKeyDialog::OnKeyPress, this);
 
@@ -118,17 +166,23 @@ ChangeHotKeyDialog::ChangeHotKeyDialog(wxWindow* parent, int hotKeyID) :
 
 void ChangeHotKeyDialog::OnKeyPress(wxKeyEvent& event)
 {
-	int keycode = event.GetKeyCode();
-	
-	if (keycode != WXK_SHIFT && keycode != 'W')
+	int keyCode = event.GetKeyCode();
+	if (keyCode != WXK_SHIFT && keyCode != 'W' && keyCode != 0)
 	{
-		wxMessageBox(KeyToString(keycode) + std::to_string(keycode));
+		this->keyCode = keyCode;
+
+		EndModal(wxID_OK);
 	}
 	
 	event.Skip();
 }
 
-std::string ChangeHotKeyDialog::KeyToString(int keycode)
+int ChangeHotKeyDialog::getKeyCode()
+{
+	return keyCode;
+}
+
+std::string GUI::KeyToString(int keycode)
 {
 	// Reserved codes for the standard ASCII characters
 	if ((keycode >= 33 && keycode <= 126) || (keycode >= 128 && keycode <= 255)) {

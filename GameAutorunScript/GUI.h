@@ -7,13 +7,12 @@
 class GUI : public wxFrame
 {
 private:
-	wxFrame* mainWindow;		// Main application window
 	int hotKeyID;
-	int wHotKeyID;
-	int shiftHotKeyID;
+	wxButton* changeHotkeyBtn;
 
 public:
 	bool scriptActivated;
+	int hotKeyCode;
 
 	GUI(const wxString& title, const wxPoint& pos, const wxSize& size);
 	void OnHotKey(wxKeyEvent& event);
@@ -21,15 +20,16 @@ public:
 	void keyRelease(WORD keyCode);
 	void OnKeyPress(wxKeyEvent& event);
 	void OnChangeHotkey(wxCommandEvent& event);
+	static std::string KeyToString(int keycode);
 };
 
 class ChangeHotKeyDialog : public wxDialog
 {
 private:
-	int hotKeyID;
+	int keyCode;
 
 public:
-	ChangeHotKeyDialog(wxWindow* parent, int hotKeyID);
+	ChangeHotKeyDialog(wxWindow* parent);
 	void OnKeyPress(wxKeyEvent& event);
-	std::string KeyToString(int keycode);
+	int getKeyCode();
 };
